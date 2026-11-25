@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kicker Elo Rangliste</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-2: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-dark: #0284c7;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --err: #ef4444;
+      --border: #475569;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+      max-width: 720px;
+      margin: 0 auto;
+      line-height: 1.45;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      background: var(--card-2);
+      border: 1px solid var(--border);
+    }
+
+    .badge.ok {
+      border-color: var(--ok);
+      color: #86efac;
+    }
+
+    .badge.warn {
+      border-color: var(--warn);
+      color: #fde68a;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    h2 {
+      font-size: 1.05rem;
+      margin-bottom: 10px;
+      color: var(--accent);
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    input, select, button {
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      font-size: 0.95rem;
+    }
+
+    input, select {
+      background: var(--bg);
+      color: var(--text);
+      flex: 1;
+      min-width: 140px;
+    }
+
+    button {
+      background: var(--accent-dark);
+      color: #fff;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover {
+      filter: brightness(1.08);
+    }
+
+    button.secondary {
+      background: var(--card-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    button.danger {
+      background: #991b1b;
+      color: #fecaca;
+    }
+
+    .teams {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 560px) {
+      .teams {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .team-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .team-box h3 {
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .player-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .chk {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.92rem;
+      cursor: pointer;
+    }
+
+    .chk input {
+      flex: 0 0 auto;
+      min-width: 0;
+      width: 18px;
+      height: 18px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--card-2);
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .match-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--card-2);
+      font-size: 0.9rem;
+    }
+
+    .match-item:last-child {
+      border-bottom: none;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    #log {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      min-height: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚽ Kicker Elo Rangliste</h1>
+    <div class="status-row">
+      <span id="bleStatus" class="badge warn">Nicht verbunden</span>
+      <button id="btnConnect">Mit Puck verbinden</button>
+      <button id="btnSync" class="secondary">Sync</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2>Spieler hinzufügen</h2>
+    <div class="row">
+      <input id="newPlayerName" type="text" placeholder="Name (z. B. Max)" maxlength="24" />
+      <button id="btnAddPlayer">Hinzufügen</button>
+    </div>
+    <div id="log">Tipp: Auf iPhone den Bluefy-Browser nutzen, auf Android/PC Chrome oder Edge.</div>
+  </div>
+
+  <div class="card">
+    <h2>Match eintragen</h2>
+    <div class="teams">
+      <div class="team-box">
+        <h3>🏆 Gewinner</h3>
+        <div id="winnersBox" class="player-list"></div>
+      </div>
+      <div class="team-box">
+        <h3>😅 Verlierer</h3>
+        <div id="losersBox" class="player-list"></div>
+      </div>
+    </div>
+    <button id="btnSubmitMatch">Match speichern & Elo berechnen</button>
+  </div>
+
+  <div class="card">
+    <h2>Rangliste</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Spieler</th>
+          <th>Elo</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboardBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Letzte Matches</h2>
+    <div id="matchesList" class="muted">Noch keine Matches vorhanden.</div>
+  </div>
+
+  <div class="card">
+    <h2>Verwaltung</h2>
+    <div class="row">
+      <button id="btnReset" class="danger">Alle Daten auf Puck zurücksetzen</button>
+    </div>
+  </div>
+
+  <script>
+    var SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+    var CHAR_UUID    = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+    var CACHE_KEY    = "kicker_elo_cache_v1";
+
+    var bleDevice = null;
+    var bleChar = null;
+
+    var appState = {
+      players: {},
+      matches: []
+    };
+
+    function setLog(msg) {
+      document.getElementById("log").textContent = msg;
+    }
+
+    function setBleConnected(connected) {
+      var badge = document.getElementById("bleStatus");
+      if (connected) {
+        badge.textContent = "Verbunden (Kicker-Elo)";
+        badge.className = "badge ok";
+      } else {
+        badge.textContent = "Nicht verbunden";
+        badge.className = "badge warn";
+      }
+    }
+
+    function saveCache() {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(appState));
+      } catch (e) {}
+    }
+
+    function loadCache() {
+      try {
+        var raw = localStorage.getItem(CACHE_KEY);
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          if (parsed && parsed.players) {
+            appState = {
+              players: parsed.players || {},
+              matches: Array.isArray(parsed.matches) ? parsed.matches : []
+            };
+          }
+        }
+      } catch (e) {}
+    }
+
+    function decodeDataView(dataView) {
+      var text = "";
+      for (var i = 0; i < dataView.byteLength; i++) {
+        text += String.fromCharCode(dataView.getUint8(i));
+      }
+      return text;
+    }
+
+    function handleIncomingPayload(rawText) {
+      if (!rawText) return;
+      try {
+        var data = JSON.parse(rawText);
+        if (data && typeof data.players === "object") {
+          appState = {
+            players: data.players || {},
+            matches: Array.isArray(data.matches) ? data.matches : []
+          };
+          saveCache();
+          renderAll();
+          setLog("Daten vom Puck aktualisiert.");
+        }
+      } catch (e) {
+        setLog("Hinweis: Datenpaket empfangen (ggf. noch unvollständig).");
+      }
+    }
+
+    async function connectPuck() {
+      if (!navigator.bluetooth) {
+        setLog("Web Bluetooth wird in diesem Browser nicht unterstützt (nutze Chrome, Edge oder Bluefy).");
+        return;
+      }
+
+      try {
+        setLog("Suche nach Kicker-Elo...");
+        bleDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ name: "Kicker-Elo" }],
+          optionalServices: [SERVICE_UUID]
+        });
+
+        bleDevice.addEventListener("gattserverdisconnected", function () {
+          setBleConnected(false);
+          bleChar = null;
+          setLog("Verbindung zum Puck getrennt.");
+        });
+
+        var server = await bleDevice.gatt.connect();
+        var service = await server.getPrimaryService(SERVICE_UUID);
+        bleChar = await service.getCharacteristic(CHAR_UUID);
+
+        await bleChar.startNotifications();
+        bleChar.addEventListener("characteristicvaluechanged", function (event) {
+          handleIncomingPayload(decodeDataView(event.target.value));
+        });
+
+        var initialVal = await bleChar.readValue();
+        handleIncomingPayload(decodeDataView(initialVal));
+
+        setBleConnected(true);
+        setLog("Erfolgreich mit Kicker-Elo verbunden.");
+      } catch (err) {
+        setBleConnected(false);
+        setLog("Verbindung fehlgeschlagen: " + (err && err.message ? err.message : err));
+      }
+    }
+
+    async function sendCommand(obj) {
+      if (!bleChar) {
+        setLog("Bitte zuerst auf 'Mit Puck verbinden' tippen.");
+        return false;
+      }
+
+      try {
+        var jsonStr = JSON.stringify(obj);
+        var encoder = new TextEncoder();
+        var bytes = encoder.encode(jsonStr);
+
+        // In kleine Pakete (z.B. 20 Bytes) aufteilen für zuverlässige BLE-Übertragung
+        var chunkSize = 20;
+        for (var i = 0; i < bytes.length; i += chunkSize) {
+          var chunk = bytes.slice(i, i + chunkSize);
+          await bleChar.writeValue(chunk);
+        }
+
+        // Kurz warten und Wert neu lesen, falls Notification auf älterer Firmware verzögert ist
+        setTimeout(async function () {
+          if (!bleChar) return;
+          try {
+            var val = await bleChar.readValue();
+            handleIncomingPayload(decodeDataView(val));
+          } catch (e) {}
+        }, 350);
+
+        return true;
+      } catch (err) {
+        setLog("Senden fehlgeschlagen: " + (err && err.message ? err.message : err));
+        return false;
+      }
+    }
+
+    function getCheckedPlayers(containerId) {
+      var box = document.getElementById(containerId);
+      var inputs = box.querySelectorAll("input[type='checkbox']:checked");
+      var names = [];
+      for (var i = 0; i < inputs.length; i++) {
+        names.push(inputs[i].value);
+      }
+      return names;
+    }
+
+    function renderTeamSelectors(sortedNames) {
+      var wBox = document.getElementById("winnersBox");
+      var lBox = document.getElementById("losersBox");
+      var prevW = getCheckedPlayers("winnersBox");
+      var prevL = getCheckedPlayers("losersBox");
+
+      wBox.innerHTML = "";
+      lBox.innerHTML = "";
+
+      if (sortedNames.length === 0) {
+        wBox.innerHTML = '<span class="muted">Erst Spieler anlegen</span>';
+        lBox.innerHTML = '<span class="muted">Erst Spieler anlegen</span>';
+        return;
+      }
+
+      for (var i = 0; i < sortedNames.length; i++) {
+        var name = sortedNames[i];
+
+        var lblW = document.createElement("label");
+        lblW.className = "chk";
+        var cbW = document.createElement("input");
+        cbW.type = "checkbox";
+        cbW.value = name;
+        if (prevW.indexOf(name) !== -1) cbW.checked = true;
+        lblW.appendChild(cbW);
+        lblW.appendChild(document.createTextNode(name));
+        wBox.appendChild(lblW);
+
+        var lblL = document.createElement("label");
+        lblL.className = "chk";
+        var cbL = document.createElement("input");
+        cbL.type = "checkbox";
+        cbL.value = name;
+        if (prevL.indexOf(name) !== -1) cbL.checked = true;
+        lblL.appendChild(cbL);
+        lblL.appendChild(document.createTextNode(name));
+        lBox.appendChild(lblL);
+      }
+    }
+
+    function renderLeaderboard() {
+      var tbody = document.getElementById("leaderboardBody");
+      var entries = [];
+      for (var name in appState.players) {
+        if (Object.prototype.hasOwnProperty.call(appState.players, name)) {
+          entries.push({ name: name, elo: appState.players[name] });
+        }
+      }
+
+      entries.sort(function (a, b) {
+        return b.elo - a.elo;
+      });
+
+      var sortedNames = entries.map(function (item) {
+        return item.name;
+      });
+      renderTeamSelectors(sortedNames);
+
+      tbody.innerHTML = "";
+      if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="muted">Noch keine Spieler angelegt.</td></tr>';
+        return;
+      }
+
+      for (var i = 0; i < entries.length; i++) {
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" + (i + 1) + "</td>" +
+          "<td>" + escapeHtml(entries[i].name) + "</td>" +
+          "<td><strong>" + entries[i].elo + "</strong></td>";
+        tbody.appendChild(tr);
+      }
+    }
+
+    function renderMatches() {
+      var container = document.getElementById("matchesList");
+      if (!appState.matches || appState.matches.length === 0) {
+        container.innerHTML = '<div class="muted">Noch keine Matches vorhanden.</div>';
+        return;
+      }
+
+      container.innerHTML = "";
+      for (var i = 0; i < appState.matches.length; i++) {
+        var m = appState.matches[i];
+        var div = document.createElement("div");
+        div.className = "match-item";
+        var wText = (m.w || []).join(", ");
+        var lText = (m.l || []).join(", ");
+        var dText = typeof m.d === "number" ? " (±" + m.d + " Elo)" : "";
+        div.innerHTML =
+          "<strong>" + escapeHtml(wText) + "</strong> besiegt " +
+          escapeHtml(lText) +
+          ' <span class="muted">' + escapeHtml(dText) + "</span>";
+        container.appendChild(div);
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function renderAll() {
+      renderLeaderboard();
+      renderMatches();
+    }
+
+    document.getElementById("btnConnect").addEventListener("click", connectPuck);
+
+    document.getElementById("btnSync").addEventListener("click", function () {
+      sendCommand({ cmd: "sync" });
+    });
+
+    document.getElementById("btnAddPlayer").addEventListener("click", async function () {
+      var input = document.getElementById("newPlayerName");
+      var name = input.value.trim();
+      if (!name) {
+        setLog("Bitte einen Spielernamen eingeben.");
+        return;
+      }
+      var ok = await sendCommand({ cmd: "addPlayer", name: name });
+      if (ok) {
+        input.value = "";
+        setLog("Spieler '" + name + "' an den Puck gesendet.");
+      }
+    });
+
+    document.getElementById("btnSubmitMatch").addEventListener("click", async function () {
+      var winners = getCheckedPlayers("winnersBox");
+      var losers = getCheckedPlayers("losersBox");
+
+      if (winners.length === 0 || losers.length === 0) {
+        setLog("Bitte mindestens einen Gewinner und einen Verlierer auswählen.");
+        return;
+      }
+
+      for (var i = 0; i < winners.length; i++) {
+        if (losers.indexOf(winners[i]) !== -1) {
+          setLog("Dieselbe Person kann nicht gleichzeitig Gewinner und Verlierer sein.");
+          return;
+        }
+      }
+
+      var ok = await sendCommand({
+        cmd: "match",
+        winners: winners,
+        losers: losers
+      });
+      if (ok) {
+        setLog("Match an den Puck gesendet.");
+      }
+    });
+
+    document.getElementById("btnReset").addEventListener("click", async function () {
+      if (!confirm("Wirklich alle Spieler und Matches auf dem Puck löschen?")) return;
+      await sendCommand({ cmd: "reset" });
+    });
+
+    loadCache();
+    renderAll();
+  </script>
+</body>
+</html>
